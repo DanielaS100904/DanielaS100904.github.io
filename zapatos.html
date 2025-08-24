@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Diagrama Normalizado — Tienda de Zapatos (standalone)</title>
+  <meta name="description"
+    content="Interactivo local: normalización (1NF,2NF,3NF) para una tienda de zapatos. Abre con doble-clic." />
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Fonts & small animation libs -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <script src="https://unpkg.com/@motionone/dom/dist/motion.dom.min.js"></script>
+
+  <!-- React + ReactDOM UMD -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <!-- Babel (solo demo local) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    :root {
+      --muted: #64748b;
+      --accent-from: #06b6d4;
+      --accent-to: #7c3aed;
+      --accent: linear-gradient(90deg, var(--accent-from), var(--accent-to));
+      --card-bg: rgba(11, 11, 11, 0.75);
+      --border: rgba(255, 255, 255, 0.18);
+    }
+
+    /* Reset */
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+      color: #0b1220;
+      background: transparent;
+    }
+
+/* Fondo pastel con patrón de emojis (zapatos + escuela) */
+body {
+  background: linear-gradient(135deg, #fff9c4, #ffe0b2, #f8bbd0);
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+}
+
+
+    @keyframes gradientShift {
+      0% {
+        background-position: 0% 50%
+      }
+
+      50% {
+        background-position: 100% 50%
+      }
+
+      100% {
+        background-position: 0% 50%
+      }
+    }
+
+
+    /* Contenedor principal */
+    .app-body {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 0;
+    }
+
+    /* Overlay blur para legibilidad */
+    .app-body::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      backdrop-filter: blur(10px) saturate(120%);
+      -webkit-backdrop-filter: blur(10px) saturate(120%);
+      background: rgba(255, 255, 255, 0.05);
+      z-index: 0;
+    }
+
+    .app-shell {
+      position: relative;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: 1fr 10px;
+      /* inspector más ancho */
+      gap: 60px;
+      /* más espacio entre el diagrama y el inspector */
+      width: 100%;
+      max-width: 1500px;
+      padding: 20px;
+      height: calc(100vh - 40px);
+      padding-top: 100px;
+      /* esto empuja todo para que la barra superior no se superponga */
+    }
+
+    /* Canvas */
+    .canvas-wrap {
+      height: calc(100vh - 200px);
+      min-height: 520px;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+    }
+
+    /* Diagrama */
+    .diagram-canvas {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(245, 245, 255, 0.9));
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Tablas */
+    .table-box {
+      position: absolute;
+      width: 260px;
+      padding: 14px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      cursor: grab;
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+
+    .table-box:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .table-title {
+      font-weight: 800;
+      font-size: 14px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #1e293b;
+    }
+
+    .badge-accent {
+      background: var(--accent);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .inspector {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      height: calc(100vh - 160px);
+      /* más alto */
+      min-height: 600px;
+      /* asegura altura mínima mayor */
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    /* Mueve más a la derecha el panel de Etapa de Normalización */
+    .inspector .panel:first-child {
+      margin-left: 40px;
+      /* empuja hacia la derecha */
+    }
+
+
+    /* Título dentro del panel */
+    .inspector .panel:first-child h3 {
+      font-size: 1rem;
+      margin-bottom: 14px;
+    }
+
+    /* Botones de etapas más grandes */
+    .inspector .panel:first-child .btn {
+      padding: 12px 22px;
+      font-size: 0.95rem;
+      min-width: 120px;
+      /* más ancho */
+      border-radius: 12px;
+    }
+
+    /* Panel individual */
+    .inspector .panel {
+      padding: 18px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    /* Botones */
+    .btn {
+      background: white;
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn.active {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    /* Barra superior */
+    .author-bar {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      padding: 8px 16px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--border);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .app-title {
+      font-weight: 700;
+      font-size: 14px;
+      color: rgb(0, 0, 0);
+      text-align: center;
+    }
+
+    /* Responsivo */
+    @media (max-width: 1024px) {
+      .app-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .inspector {
+        order: 2;
+      }
+
+      .canvas-wrap {
+        order: 1;
+      }
+    }
+  </style>
+</head>
+
+<body class="antialiased min-h-screen">
+  <div class="app-body">
+    <div class="author-bar" aria-hidden="true">
+      <div class="author-inner">
+        <div class="app-title">📖Diagrama Normalizado📖 — 👟Tienda de Zapatos👟</div>
+        <div class="authors">
+          <span class="glow-text">🧑‍🏫JOHAN STEEVEN MEDINA GARCIA</span>
+          <span class="glow-sep"> &nbsp;|&nbsp; </span>
+          <span class="glow-text">🧑‍🏫DANIELA SILVA RAMIREZ</span>
+        </div>
+        <div class="progress-anim" aria-hidden="true">
+          <div class="progress-fill"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="app-shell">
+      <div id="root" class="w-full h-full"></div>
+    </div>
+  </div>
+
+  <script type="text/babel">
+    const { useState, useMemo, useRef, useEffect } = React;
+
+    const Tag = ({ children }) => <span className="legend-pill">{children}</span>;
+    const Card = ({ title, children }) => (
+      <div className="card overflow-hidden">
+        {title && <div className="px-4 py-2 bg-gradient-to-r from-white/60 to-white/30 text-sm font-semibold" style={{ borderBottom: "1px solid rgba(2,6,23,0.03)" }}>{title}</div>}
+        <div className="p-4">{children}</div>
+      </div>
+    );
+
+
+    const antiColumns = ["SaleID", "Cliente", "Producto(s)", "Marca", "PrecioTotal", "Vendedor", "TelefonoVendedor", "Fecha", "CantidadPorProducto"];
+    const antiRows = [
+      { SaleID: 1, Cliente: "María Ruiz", "Producto(s)": "Zapatilla Runner 42; Calcetines Pack M", Marca: "FastFeet", PrecioTotal: 120, Vendedor: "Andrés R", TelefonoVendedor: "311 555 2121", Fecha: "2025-06-01", CantidadPorProducto: "1;2" },
+      { SaleID: 2, Cliente: "Carlos Vega", "Producto(s)": "Botín Urban 44", Marca: "CityStep", PrecioTotal: 80, Vendedor: "Andrés R", TelefonoVendedor: "311 555 2121", Fecha: "2025-06-02", CantidadPorProducto: "1" },
+      { SaleID: 3, Cliente: "María Ruiz", "Producto(s)": "Zapatilla Runner 42", Marca: "FastFeet", PrecioTotal: 60, Vendedor: "Lina P", TelefonoVendedor: "320 444 9988", Fecha: "2025-06-10", CantidadPorProducto: "1" },
+    ];
+    const normalizedModel = () => {
+      return {
+        Factura: {
+          columns: ["FacturaID", "ClienteID", "VendedorID", "Fecha", "Hora", "ValorTotal"],
+          rows: [
+            { FacturaID: 1001, ClienteID: 501, VendedorID: 701, Fecha: "2025-06-01", Hora: "10:32", ValorTotal: 120 },
+            { FacturaID: 1002, ClienteID: 502, VendedorID: 701, Fecha: "2025-06-02", Hora: "14:10", ValorTotal: 80 },
+            { FacturaID: 1003, ClienteID: 501, VendedorID: 702, Fecha: "2025-06-10", Hora: "09:20", ValorTotal: 60 },
+          ]
+        },
+        Producto: {
+          columns: ["ProductoID", "FacturaID", "ProveedorID", "Tipo", "Talla", "Color", "Precio"],
+          rows: [
+            { ProductoID: 2001, FacturaID: 1001, ProveedorID: 3001, Tipo: "Zapatilla Runner", Talla: 42, Color: "Blanco", Precio: 60 },
+            { ProductoID: 2002, FacturaID: 1001, ProveedorID: 3002, Tipo: "Calcetines Pack", Talla: "M", Color: "Negro", Precio: 30 },
+            { ProductoID: 2003, FacturaID: 1002, ProveedorID: 3003, Tipo: "Botín Urban", Talla: 44, Color: "Marrón", Precio: 80 },
+          ]
+        },
+        Proveedor: {
+          columns: ["ProveedorID", "ProductoID", "Precio", "Cantidad"],
+          rows: [
+            { ProveedorID: 3001, ProductoID: 2001, Precio: 50, Cantidad: 200 },
+            { ProveedorID: 3002, ProductoID: 2002, Precio: 20, Cantidad: 500 },
+            { ProveedorID: 3003, ProductoID: 2003, Precio: 60, Cantidad: 150 },
+          ]
+        },
+        Cliente: {
+          columns: ["ClienteID", "DetalleFacturaID", "Nombre", "Apellidos", "Documento", "Telefono", "Correo"],
+          rows: [
+            { ClienteID: 501, DetalleFacturaID: 9001, Nombre: "María", Apellidos: "Ruiz", Documento: "CC12345", Telefono: "300111222", Correo: "maria@example.com" },
+            { ClienteID: 502, DetalleFacturaID: 9002, Nombre: "Carlos", Apellidos: "Vega", Documento: "CC67890", Telefono: "300333444", Correo: "carlos@example.com" },
+          ]
+        },
+        DetalleProducto: {
+          columns: ["DetalleProductoID", "ProductoID", "Caracteristica", "Valor"],
+          rows: [
+            { DetalleProductoID: 4001, ProductoID: 2001, Caracteristica: "Material", Valor: "Sintético" },
+            { DetalleProductoID: 4002, ProductoID: 2001, Caracteristica: "Tecnología", Valor: "AirFlex" },
+            { DetalleProductoID: 4003, ProductoID: 2003, Caracteristica: "Reforzado", Valor: "Puntera" },
+          ]
+        },
+        Vendedor: {
+          columns: ["VendedorID", "Nombre", "Telefono", "Correo"],
+          rows: [
+            { VendedorID: 701, Nombre: "Andrés R", Telefono: "3115552121", Correo: "andres@tienda.com" },
+            { VendedorID: 702, Nombre: "Lina P", Telefono: "3204449988", Correo: "lina@tienda.com" },
+          ]
+        },
+        DetalleFactura: {
+          columns: ["DetFacturaID", "FacturaID", "ProductoID", "Cantidad", "PrecioUnitario"],
+          rows: [
+            { DetFacturaID: 9001, FacturaID: 1001, ProductoID: 2001, Cantidad: 1, PrecioUnitario: 60 },
+            { DetFacturaID: 9002, FacturaID: 1001, ProductoID: 2002, Cantidad: 2, PrecioUnitario: 30 },
+            { DetFacturaID: 9003, FacturaID: 1002, ProductoID: 2003, Cantidad: 1, PrecioUnitario: 80 },
+          ]
+        }
+      };
+    };
+    const after1NF = () => {
+      const m = normalizedModel();
+      return {
+        Factura: m.Factura,
+        DetalleFactura: m.DetalleFactura,
+        Producto: m.Producto,
+        Cliente: m.Cliente,
+        Vendedor: m.Vendedor,
+      };
+    };
+    const after2NF = () => {
+      return normalizedModel();
+    };
+    const after3NF = () => {
+      const base = normalizedModel();
+      base.VendedorContact = { columns: ["VendedorID", "Telefono"], rows: base.Vendedor.rows.map(r => ({ VendedorID: r.VendedorID, Telefono: r.Telefono })) };
+      base.Vendedor.columns = ["VendedorID", "Nombre", "Correo"];
+      base.Vendedor.rows = base.Vendedor.rows.map(r => ({ VendedorID: r.VendedorID, Nombre: r.Nombre, Correo: r.Correo }));
+      return base;
+    };
+    function Table({ columns, rows }) {
+      return (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr>{columns.map(c => <th key={c} className="border-b border-black/5 px-3 py-2 text-left bg-gray-50 text-gray-700">{c}</th>)}</tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={i} className="odd:bg-white even:bg-gray-50">
+                  {columns.map(c => <td key={c} className="border-b border-black/5 px-3 py-2 align-top"><span className="whitespace-pre-wrap">{String(r[c] ?? "")}</span></td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+    const relsFor = (stage, tables) => {
+      const keys = Object.keys(tables);
+      if (stage === "before") return [];
+      if (stage === "1nf") {
+        return [
+          { from: "Factura", to: "DetalleFactura", cardFrom: "1", cardTo: "N" },
+          { from: "Factura", to: "Cliente", cardFrom: "N", cardTo: "1" },
+          { from: "Factura", to: "Vendedor", cardFrom: "N", cardTo: "1" },
+          { from: "DetalleFactura", to: "Producto", cardFrom: "N", cardTo: "1" },
+          { from: "Producto", to: "Proveedor", cardFrom: "N", cardTo: "1" },
+        ].filter(r => keys.includes(r.from) && keys.includes(r.to));
+      }
+      if (stage === "2nf") {
+        return [
+          { from: "Factura", to: "DetalleFactura", cardFrom: "1", cardTo: "N" },
+          { from: "Factura", to: "Cliente", cardFrom: "N", cardTo: "1" },
+          { from: "Factura", to: "Vendedor", cardFrom: "N", cardTo: "1" },
+          { from: "DetalleFactura", to: "Producto", cardFrom: "N", cardTo: "1" },
+          { from: "Producto", to: "DetalleProducto", cardFrom: "1", cardTo: "N" },
+          { from: "Producto", to: "Proveedor", cardFrom: "N", cardTo: "1" },
+        ].filter(r => keys.includes(r.from) && keys.includes(r.to));
+      }
+      if (stage === "3nf") {
+        return [
+          { from: "Factura", to: "DetalleFactura", cardFrom: "1", cardTo: "N" },
+          { from: "Factura", to: "Cliente", cardFrom: "N", cardTo: "1" },
+          { from: "Factura", to: "Vendedor", cardFrom: "N", cardTo: "1" },
+          { from: "DetalleFactura", to: "Producto", cardFrom: "N", cardTo: "1" },
+          { from: "Producto", to: "DetalleProducto", cardFrom: "1", cardTo: "N" },
+          { from: "Producto", to: "Proveedor", cardFrom: "N", cardTo: "1" },
+          { from: "Vendedor", to: "VendedorContact", cardFrom: "1", cardTo: "1" },
+        ].filter(r => keys.includes(r.from) && keys.includes(r.to));
+      }
+      return [];
+    };
+    function Diagram({ tables, relationships, boxWidth = 280 }) {
+      const containerRef = useRef(null);
+      const [boxes, setBoxes] = useState({});
+      const [hovered, setHovered] = useState(null);
+      const [size, setSize] = useState({ w: 800, h: 460 });
+      const keysString = useMemo(() => Object.keys(tables).join('|'), [tables]);
+      useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        const ro = new ResizeObserver(() => {
+          setSize({ w: Math.max(200, el.clientWidth), h: Math.max(160, el.clientHeight) });
+        });
+        ro.observe(el);
+        setSize({ w: Math.max(200, el.clientWidth), h: Math.max(160, el.clientHeight) });
+        return () => ro.disconnect();
+      }, []);
+      useEffect(() => {
+        const keys = Object.keys(tables);
+        const cols = Math.min(3, Math.max(1, keys.length));
+        const bw = boxWidth;
+        const availableW = Math.max(bw + 40, size.w);
+        const spacing = Math.max(20, Math.floor((availableW - cols * bw) / (cols + 1)));
+        setBoxes(prev => {
+          const newb = {};
+          keys.forEach((k, i) => {
+            if (prev[k]) newb[k] = prev[k];
+            else {
+              const col = i % cols;
+              const row = Math.floor(i / cols);
+              const x = spacing + col * (bw + spacing);
+              const y = 20 + row * 200;
+              newb[k] = { x, y };
+            }
+          });
+          return newb;
+        });
+      }, [keysString, size.w]);
+      const dragRef = useRef({ key: null, offX: 0, offY: 0 });
+
+      function onMouseDown(e, key) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const startX = e.clientX - rect.left;
+        const startY = e.clientY - rect.top;
+        const b = boxes[key] || { x: 0, y: 0 };
+        dragRef.current = { key, offX: startX - b.x, offY: startY - b.y };
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+      }
+      function onMouseMove(e) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const k = dragRef.current.key;
+        if (!k) return;
+        const x = e.clientX - rect.left - dragRef.current.offX;
+        const y = e.clientY - rect.top - dragRef.current.offY;
+        const maxX = Math.max(6, size.w - boxWidth - 6);
+        const maxY = Math.max(6, size.h - 120);
+        setBoxes(prev => ({ ...prev, [k]: { x: Math.max(6, Math.min(x, maxX)), y: Math.max(6, Math.min(y, maxY)) } }));
+      }
+      function onMouseUp() {
+        dragRef.current = { key: null, offX: 0, offY: 0 };
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+      }
+      const points = useMemo(() => {
+        return Object.fromEntries(Object.entries(boxes).map(([k, v]) => [k, { cx: v.x + (boxWidth / 2), cy: v.y + 28 }]));
+      }, [boxes]);
+      function midPoint(a, b, t = 0.5, offset = 0) {
+        const mx = a.cx + (b.cx - a.cx) * t;
+        const my = a.cy + (b.cy - a.cy) * t;
+        const dx = b.cx - a.cx;
+        const dy = b.cy - a.cy;
+        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+        const nx = -dy / len;
+        const ny = dx / len;
+        return { x: mx + nx * offset, y: my + ny * offset };
+      }
+
+      return (
+        <div ref={containerRef} className="diagram-canvas w-full h-full relative overflow-hidden">
+          {/* SVG for relationships */}
+          <svg className="relationships w-full h-full" viewBox={`0 0 ${size.w} ${size.h}`} preserveAspectRatio="none">
+            {relationships.map((r, i) => {
+              const a = points[r.from];
+              const b = points[r.to];
+              if (!a || !b) return null;
+              const mid = midPoint(a, b, 0.5, 0);
+              const labelPos = midPoint(a, b, 0.5, 20);
+              const dist = Math.sqrt(Math.pow(b.cx - a.cx, 2) + Math.pow(b.cy - a.cy, 2));
+              // avoid overlapping lines
+              const offset = Math.min(40, Math.max(-40, dist / 6));
+              const curveOffset = midPoint(a, b, 0.5, offset);
+              const d = `M ${a.cx} ${a.cy} Q ${curveOffset.x} ${curveOffset.y} ${b.cx} ${b.cy}`;
+              return (
+                <g key={i} className="rel-group">
+                  <path d={d} stroke="rgba(6,182,212,0.5)" strokeWidth="3" fill="none" className="rel-path" style={{ strokeDashoffset: 0 }} />
+                  <path d={d} stroke="rgba(124,58,237,0.5)" strokeWidth="1.5" fill="none" className="rel-path" style={{ strokeDashoffset: 0 }} />
+                  <circle cx={a.cx} cy={a.cy} r="4" fill="#06b6d4" className="endpoint-dot" />
+                  <circle cx={b.cx} cy={b.cy} r="4" fill="#7c3aed" className="endpoint-dot" />
+                  <text x={labelPos.x} y={labelPos.y} textAnchor="middle" className="rel-label" fill="#0b1220" fontSize="12" fontWeight="700">
+                    {r.cardFrom} : {r.cardTo}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+          {/* Render boxes */}
+          {Object.entries(tables).map(([k, table]) => {
+            const pos = boxes[k] || { x: 0, y: 0 };
+            return (
+              <div key={k} className="table-box absolute" style={{ left: pos.x, top: pos.y, width: boxWidth }}
+                onMouseDown={e => onMouseDown(e, k)}
+                onMouseEnter={() => setHovered(k)}
+                onMouseLeave={() => setHovered(null)}>
+                <div className="table-title">
+                  <span className="badge-accent">{k}</span>
+                  <span className="text-xs text-gray-500">({table.columns.length} campos)</span>
+                </div>
+                <div className="table-cols">
+                  {table.columns.map((c, i) => (
+                    <div key={i} className="col-item text-xs font-mono" style={{ color: "#0f172a" }}>{c}</div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    /* Panel de control: selección de etapa y vista de datos */
+    function Controls({ stage, setStage }) {
+      const stages = [
+        { id: "before", label: "Antes (no normalizado)", desc: "Tabla con datos repetidos y problemas de atomicidad." },
+        { id: "1nf", label: "1NF", desc: "Eliminación de grupos repetidos y atributos atómicos." },
+        { id: "2nf", label: "2NF", desc: "Eliminación de dependencias parciales." },
+        { id: "3nf", label: "3NF", desc: "Eliminación de dependencias transitivas." },
+      ];
+      return (
+        <div className="controls flex flex-wrap gap-2">
+          {stages.map(s => (
+            <button key={s.id} onClick={() => setStage(s.id)}
+              className={`btn ${stage === s.id ? 'active' : ''}`}
+              title={s.desc}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    /* Panel de información: muestra la tabla seleccionada */
+    function TableViewer({ tables, selected }) {
+      if (!selected || !tables[selected]) return <div className="text-sm text-gray-500">Selecciona una tabla para ver sus datos</div>;
+      const table = tables[selected];
+      return (
+        <div className="table-view">
+          <div className="mb-2 text-sm font-semibold text-gray-700">Datos de la tabla: <span className="text-indigo-600">{selected}</span></div>
+          <div className="col-list">
+            {table.rows.map((r, i) => (
+              <div key={i} className="row-item">
+                {table.columns.map(c => (
+                  <div key={c} className="cell">
+                    <span className="text-xs text-gray-500">{c}:</span> {String(r[c] ?? "")}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    /* Panel de explicación: muestra la descripción de la etapa actual */
+    function Explanation({ stage }) {
+      const texts = {
+        before: "La tabla original tiene problemas de atomicidad (campos con múltiples valores), datos repetidos y dependencias parciales. Por ejemplo, 'Producto(s)' contiene múltiples productos en una sola celda.",
+        "1nf": "1NF: Se han separado los campos no atómicos (Producto(s)) en registros individuales. Se creó la tabla DetalleFactura para manejar la relación muchos a muchos entre Factura y Producto.",
+        "2nf": "2NF: Se eliminaron dependencias parciales. Los datos de Proveedor y DetalleProducto se separaron en sus propias tablas para que dependan completamente de la clave primaria.",
+        "3nf": "3NF: Se eliminaron dependencias transitivas. Los datos que no dependen directamente de la clave primaria (como TeléfonoVendedor) se movieron a tablas separadas."
+      };
+      return (
+        <div className="explanation text-sm text-gray-700">
+          <p>{texts[stage]}</p>
+        </div>
+      );
+    }
+
+    /* App principal */
+    function App() {
+      const [stage, setStage] = useState("before");
+      const [selectedTable, setSelectedTable] = useState(null);
+
+      // Obtener datos según la etapa
+      const { tables, relationships } = useMemo(() => {
+        let t = {};
+        if (stage === "before") {
+          t = { "Ventas (no normalizado)": { columns: antiColumns, rows: antiRows } };
+        } else if (stage === "1nf") {
+          t = after1NF();
+        } else if (stage === "2nf") {
+          t = after2NF();
+        } else if (stage === "3nf") {
+          t = after3NF();
+        }
+        const r = relsFor(stage, t);
+        return { tables: t, relationships: r };
+      }, [stage]);
+
+      return (
+        <div className="w-full h-full grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
+          {/* Canvas principal */}
+          <div className="canvas-wrap">
+            <Diagram tables={tables} relationships={relationships} boxWidth={280} />
+          </div>
+
+          {/* Panel lateral derecho */}
+          <div className="inspector">
+            <div className="panel">
+              <h3>Etapa de Normalización</h3>
+              <Controls stage={stage} setStage={setStage} />
+            </div>
+            <div className="panel">
+              <h3>Explicación</h3>
+              <Explanation stage={stage} />
+            </div>
+            <div className="panel">
+              <h3>Tablas Disponibles</h3>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {Object.keys(tables).map(k => (
+                  <button key={k} onClick={() => setSelectedTable(k)} className={`btn ${selectedTable === k ? 'active' : ''}`}>{k}</button>
+                ))}
+              </div>
+            </div>
+            {selectedTable && (
+              <div className="panel">
+                <h3>Datos de {selectedTable}</h3>
+                <TableViewer tables={tables} selected={selectedTable} />
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Render app
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+
+</html>
