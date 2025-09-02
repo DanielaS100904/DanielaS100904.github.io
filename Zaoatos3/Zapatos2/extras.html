@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quiz Normalización</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React y ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+
+  <!-- Babel para JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(120deg, #fde2e4 0%, #fbcfe8 50%, #fce7f3 100%);
+      position: relative;
+      overflow-x: hidden;
+    }
+    .dog-bg {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .dog {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      opacity: 0.7;
+      animation: dog-move 20s linear infinite;
+    }
+    .dog2 {
+      width: 40px;
+      height: 40px;
+      opacity: 0.5;
+      animation: dog-move2 24s linear infinite;
+    }
+    @keyframes dog-move {
+      0% { transform: translateY(110vh) translateX(10vw) scale(1) rotate(-10deg); }
+      50% { transform: translateY(40vh) translateX(60vw) scale(1.1) rotate(10deg); }
+      100% { transform: translateY(-10vh) translateX(90vw) scale(1) rotate(-10deg); }
+    }
+    @keyframes dog-move2 {
+      0% { transform: translateY(120vh) translateX(80vw) scale(0.8) rotate(10deg); }
+      50% { transform: translateY(30vh) translateX(20vw) scale(1.2) rotate(-10deg); }
+      100% { transform: translateY(-10vh) translateX(-10vw) scale(0.8) rotate(10deg); }
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: -1;
+      background: url('https://www.transparenttextures.com/patterns/diamond-upholstery.png'), 
+                  linear-gradient(120deg, #fde2e4 0%, #fbcfe8 50%, #fce7f3 100%);
+      opacity: 0.7;
+      filter: blur(2px);
+      background-size: cover;
+    }
+    header {
+      background: rgba(244,114,182,0.85); /* Rosa pastel intenso */
+      padding: 15px;
+      border-radius: 0 0 20px 20px;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      box-shadow: 0 2px 12px rgba(244,114,182,0.1);
+      backdrop-filter: blur(4px);
+    }
+    .nav-btn {
+      background: linear-gradient(90deg, #f472b6, #f9a8d4);
+      color: #fff;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 18px;
+      margin: 8px 6px 0 0;
+      box-shadow: 0 2px 8px rgba(244,114,182,0.1);
+      transition: background 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+    .nav-btn:hover {
+      background: #f9a8d4;
+      box-shadow: 0 4px 16px rgba(244,114,182,0.18);
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Fondo animado de perritos -->
+  <div class="dog-bg">
+    <svg class="dog" style="left: 12vw; animation-delay: 0s;" viewBox="0 0 60 60">
+      <g>
+        <ellipse cx="30" cy="40" rx="18" ry="12" fill="#fbbf24"/>
+        <ellipse cx="20" cy="25" rx="8" ry="10" fill="#a5b4fc"/>
+        <ellipse cx="40" cy="25" rx="8" ry="10" fill="#a5b4fc"/>
+        <ellipse cx="30" cy="20" rx="10" ry="8" fill="#fbbf24"/>
+        <ellipse cx="24" cy="16" rx="3" ry="5" fill="#6366f1"/>
+        <ellipse cx="36" cy="16" rx="3" ry="5" fill="#6366f1"/>
+        <circle cx="27" cy="22" r="1.5" fill="#222"/>
+        <circle cx="33" cy="22" r="1.5" fill="#222"/>
+        <ellipse cx="30" cy="27" rx="2" ry="1" fill="#fff"/>
+      </g>
+    </svg>
+    <svg class="dog dog2" style="left: 70vw; animation-delay: 8s;" viewBox="0 0 60 60">
+      <g>
+        <ellipse cx="30" cy="40" rx="14" ry="10" fill="#a5b4fc"/>
+        <ellipse cx="20" cy="25" rx="6" ry="8" fill="#fbbf24"/>
+        <ellipse cx="40" cy="25" rx="6" ry="8" fill="#fbbf24"/>
+        <ellipse cx="30" cy="20" rx="8" ry="6" fill="#a5b4fc"/>
+        <ellipse cx="24" cy="16" rx="2" ry="4" fill="#6366f1"/>
+        <ellipse cx="36" cy="16" rx="2" ry="4" fill="#6366f1"/>
+        <circle cx="27" cy="22" r="1.2" fill="#222"/>
+        <circle cx="33" cy="22" r="1.2" fill="#222"/>
+        <ellipse cx="30" cy="27" rx="1.5" ry="0.7" fill="#fff"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- Encabezados -->
+  <header>📖Diagrama Normalizado📖 — 👟Tienda de Zapatos👟</header>
+  <header>🧑‍🏫JOHAN STEEVEN MEDINA GARCIA | 🧑‍🏫DANIELA SILVA RAMIREZ</header>
+
+  <!-- Navegación -->
+  <div class="flex justify-start items-center gap-2 max-w-3xl mx-auto mt-8">
+    <button class="nav-btn" onclick="window.location.href='zapatos.html'">🏠 Página principal</button>
+    <button class="nav-btn" onclick="window.history.back()">⬅ Volver atrás</button>
+  </div>
+
+  <!-- Aquí va el Quiz -->
+  <div id="quiz"></div>
+
+  <!-- Script del Quiz -->
+  <script type="text/babel">
+    function Quiz() {
+      const [step, setStep] = React.useState(0);
+      const [score, setScore] = React.useState(0);
+      const [userAnswers, setUserAnswers] = React.useState([]);
+
+      const questions = [
+        {
+          q: "¿Cuál es el objetivo principal de la normalización en bases de datos?",
+          options: [
+            "Reducir la redundancia de datos",
+            "Hacer consultas más lentas",
+            "Aumentar el tamaño de la base"
+          ],
+          answer: 0
+        },
+        {
+          q: "¿Qué significa 1NF (Primera Forma Normal)?",
+          options: [
+            "Que no existan valores repetidos",
+            "Que cada atributo tenga valores atómicos",
+            "Que todas las llaves primarias sean enteros"
+          ],
+          answer: 1
+        },
+        {
+          q: "¿Qué se busca al aplicar la 2NF (Segunda Forma Normal)?",
+          options: [
+            "Eliminar dependencias parciales",
+            "Eliminar claves foráneas",
+            "Reducir el número de tablas"
+          ],
+          answer: 0
+        },
+        {
+          q: "¿Qué problema evita la 3NF (Tercera Forma Normal)?",
+          options: [
+            "Dependencias transitivas",
+            "Uso de claves compuestas",
+            "Repetición de atributos clave"
+          ],
+          answer: 0
+        },
+        {
+          q: "¿Qué es una dependencia funcional en una base de datos?",
+          options: [
+            "Relación entre dos atributos donde uno determina al otro",
+            "La conexión entre dos bases de datos distintas",
+            "Un error en la integridad referencial"
+          ],
+          answer: 0
+        }
+      ];
+
+      function handleAnswer(index) {
+        const correct = index === questions[step].answer;
+        if (correct) setScore(score + 1);
+
+        setUserAnswers([
+          ...userAnswers,
+          { 
+            question: questions[step].q,
+            chosen: index,
+            correct: questions[step].answer
+          }
+        ]);
+        setStep(step + 1);
+      }
+
+      return (
+        <div className="p-6 bg-white/70 rounded-2xl shadow-lg max-w-xl mx-auto mt-6">
+          {step < questions.length ? (
+            <div>
+              <h2 className="text-lg font-bold text-pink-700 mb-4">
+                Pregunta {step + 1} de {questions.length}
+              </h2>
+              <p className="mb-4">{questions[step].q}</p>
+              <div className="space-y-2">
+                {questions[step].options.map((opt, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleAnswer(i)}
+                    className="w-full text-left px-4 py-2 rounded-lg border hover:bg-pink-200 transition"
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <h2 className="text-xl font-bold text-pink-700 mb-4 text-center">
+                ¡Quiz finalizado!
+              </h2>
+              <p className="text-center mb-4">
+                ✅ Correctas: {score} | ❌ Incorrectas: {questions.length - score}
+              </p>
+
+              <div className="space-y-4">
+                {userAnswers.map((ans, i) => (
+                  <div key={i} className="p-3 rounded-lg border bg-white shadow">
+                    <p className="font-semibold">{ans.question}</p>
+                    <p>
+                      Tu respuesta:{" "}
+                      <span className={ans.chosen === ans.correct ? "text-green-600" : "text-red-600"}>
+                        {questions[i].options[ans.chosen]}
+                      </span>
+                    </p>
+                    {ans.chosen !== ans.correct && (
+                      <p>
+                        Respuesta correcta:{" "}
+                        <span className="text-green-600">
+                          {questions[i].options[ans.correct]}
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="text-center mt-6">
+                <button
+                  onClick={() => { setStep(0); setScore(0); setUserAnswers([]); }}
+                  className="mt-4 bg-pink-400 text-white px-4 py-2 rounded-lg hover:bg-pink-600"
+                >
+                  Reintentar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("quiz")).render(<Quiz />);
+  </script>
+</body>
+</html>
